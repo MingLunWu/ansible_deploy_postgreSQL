@@ -1,16 +1,21 @@
 - name: Install PostgreSQL
-  hosts: localhost
-  vars:
-    - postgre_password: password
-    - pg_data: /var/lib/postgresql/data/pgdata
-    - mount_path: /tmp/pgdata
+  hosts: db_server
   tasks:
+    # In order to use postgresql module below
+    - name: Make sure depedency is installed
+      pip:
+        name: "{{ item }}"
+        state: 'present'
+      with_items:
+        - psycopg2-binary
+        - docker
+
     - name: Pull Docker Image
       community.docker.docker_image:
         name: postgres
         source: pull
       register: pull_result
-      failed_when: not pull_result['failed']
+      failed_when: pull_result['failed']
 
     - name: Create PG Container
       community.docker.docker_container:
@@ -23,19 +28,17 @@
           PGDATA: "{{ pg_data }}"
         ports:
           - "5432:5432"
-        auto_remove: yes
-      register: run_result
+        auto_remove: true
 
-    # In order to use postgresql module below
-    - name: Make sure psycopg2 is installed
-      pip:
-        name: psycopg2-binary
-        state: present
+    # Container need some time to init
+    - name: Wait for Check DB Status
+      wait_for:
+        timeout: 5
 
     - name: Check PGSQL exist
       postgresql_ping:
         login_host: localhost
-        login_user: postgresd
+        login_user: postgres
         login_password: "{{ postgre_password }}"
       register: check_result
       failed_when: not check_result['is_available']
