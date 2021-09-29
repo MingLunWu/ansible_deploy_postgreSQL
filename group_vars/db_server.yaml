@@ -1,0 +1,3 @@
+postgre_password: password
+pg_data: /var/lib/postgresql/data/pgdata
+mount_path: /tmp/pgdata
